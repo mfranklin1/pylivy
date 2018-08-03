@@ -21,14 +21,20 @@ VALID_SESSION_KINDS = {
 
 class JsonClient:
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, auth: dict=None) -> None:
         self.url = url
+
         self.session = requests.Session()
+        if auth is not None:
+            self.session.auth = auth
 
     def close(self) -> None:
         self.session.close()
 
     def get(self, endpoint: str='') -> dict:
+# Necessary due to https://issues.apache.org/jira/browse/KNOX-1098
+#        data = {'proxyUser': 'foobar'}
+#        return self._request('GET', endpoint, data)
         return self._request('GET', endpoint)
 
     def post(self, endpoint: str, data: dict=None) -> dict:
@@ -41,6 +47,7 @@ class JsonClient:
         self, method: str, endpoint: str, data: dict=None
     ) -> dict:
         url = self.url.rstrip('/') + endpoint
+
         response = self.session.request(method, url, json=data)
         response.raise_for_status()
         return response.json()
@@ -48,9 +55,10 @@ class JsonClient:
 
 class LivyClient:
 
-    def __init__(self, url: str) -> None:
-        self._client = JsonClient(url)
+    def __init__(self, url: str, auth: dict=None) -> None:
+        self._client = JsonClient(url, auth)
         self._server_version_cache: Optional[Version] = None
+        self.auth = auth
 
     def close(self) -> None:
         self._client.close()
@@ -82,7 +90,14 @@ class LivyClient:
                 f'this version (should be one of {valid_kinds})'
             )
 
-        data = self._client.post('/sessions', data={'kind': kind.value})
+        if self.auth is None:
+# Default behavior
+            data = {'kind': kind.value}
+        else:
+# proxyUser foobar necessary due to - https://issues.apache.org/jira/browse/KNOX-1098
+            data = {'kind': kind.value, 'proxyUser': 'foobar'}
+
+        data = self._client.post('/sessions', data=data)
         return Session.from_json(data)
 
     def get_session(self, session_id: int) -> Optional[Session]:
