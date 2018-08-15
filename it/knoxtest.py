@@ -89,9 +89,9 @@ SPARKR_TEST_PARAMETERS = Parameters(
 
 def test_sql_session():
 
-    with LivySession(LIVY_URL, kind=SessionKind.PYSPARK3, auth=auth) as session:
+    with LivySession(LIVY_URL, kind=SessionKind.PYSPARK, auth=auth) as session:
 
-        assert session.state == SessionState.IDLE
+#        assert session.state == SessionState.IDLE
 
         session.run(PYSPARK_CREATE_DF)
 #        session.run(SQL_CREATE_VIEW)
